@@ -1,0 +1,172 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_ITEMS 50
+#define MAX_COMPONENTS 3
+
+typedef struct {
+    int day, month, year;
+} Date;
+
+typedef struct {
+    int hour, minute;
+} Time;
+
+typedef struct {
+    int id;
+    int quantity;
+} Component;
+
+enum itemType {
+    PACKAGED, COOKED, COMBO
+};
+
+typedef struct {
+    int id;
+    char name[30];
+    float price;
+    int stock;
+    enum itemType type;
+    float revenue;
+
+    union {
+        Date expiry;
+        Time prepared;
+        struct {
+            Component components[MAX_COMPONENTS];
+            int count;
+        } combo;
+    } details;
+} Item;
+
+int findItem(Item items[], int n, int id) {
+    for (int i = 0; i < n; i++) {
+        if (items[i].id == id)
+            return i;
+    }
+    return -1;
+}
+
+int sellItem(Item items[], int n, int id, int quantity) {
+    int index = findItem(items, n, id);
+
+    if (index == -1) {
+        printf("Item not found.\n");
+        return 0;
+    }
+
+    Item *item = &items[index];
+
+    if (item->type == COMBO) {
+        for (int i = 0; i < item->details.combo.count; i++) {
+            int compIndex = findItem(
+                items, n,
+                item->details.combo.components[i].id
+            );
+
+            if (compIndex == -1 ||
+                items[compIndex].stock <
+                item->details.combo.components[i].quantity * quantity) {
+                printf("Insufficient stock for combo.\n");
+                return 0;
+            }
+        }
+
+        for (int i = 0; i < item->details.combo.count; i++) {
+            int compIndex = findItem(
+                items, n,
+                item->details.combo.components[i].id
+            );
+
+            items[compIndex].stock -=
+                item->details.combo.components[i].quantity * quantity;
+        }
+    }
+    else {
+        if (item->stock < quantity) {
+            printf("Insufficient stock for %s.\n", item->name);
+            return 0;
+        }
+
+        item->stock -= quantity;
+    }
+
+    float amount = item->price * quantity;
+    item->revenue += amount;
+
+    printf("Sale successful: %s x%d, Revenue = %.2f\n",
+           item->name, quantity, amount);
+
+    return 1;
+}
+
+int dateValue(Date d) {
+    return d.year * 365 + d.month * 30 + d.day;
+}
+
+void expiryWarning(Item items[], int n, Date today) {
+    printf("\nExpiry Warnings:\n");
+
+    for (int i = 0; i < n; i++) {
+        if (items[i].type == PACKAGED) {
+            int diff = dateValue(items[i].details.expiry)
+                     - dateValue(today);
+
+            if (diff >= 0 && diff <= 2) {
+                printf("%s expires on %02d/%02d/%04d\n",
+                       items[i].name,
+                       items[i].details.expiry.day,
+                       items[i].details.expiry.month,
+                       items[i].details.expiry.year);
+            }
+        }
+    }
+}
+
+void sortRevenue(Item items[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (items[j].revenue > items[i].revenue) {
+                Item temp = items[i];
+                items[i] = items[j];
+                items[j] = temp;
+            }
+        }
+    }
+}
+
+void printSummary(Item items[], int n) {
+    sortRevenue(items, n);
+
+    printf("\nDaily Revenue Summary:\n");
+    printf("Item            Revenue\n");
+
+    for (int i = 0; i < n; i++) {
+        printf("%-15s %.2f\n",
+               items[i].name, items[i].revenue);
+    }
+}
+
+int main() {
+    Item items[5] = {
+        {1, "Milk", 30, 10, PACKAGED, 0, {.expiry = {21,11,2026}}},
+        {2, "Sandwich", 50, 8, COOKED, 0, {.prepared = {10,30}}},
+        {3, "Juice", 25, 12, PACKAGED, 0, {.expiry = {23,11,2026}}},
+        {4, "Tea", 15, 20, COOKED, 0, {.prepared = {9,15}}},
+        {5, "ComboMeal", 80, 0, COMBO, 0,
+         {.combo = {{{2,1},{4,1}},2}}}
+    };
+
+    Date today = {20,11,2026};
+
+    sellItem(items, 5, 1, 2);
+    sellItem(items, 5, 2, 1);
+    sellItem(items, 5, 4, 3);
+    sellItem(items, 5, 2, 20);
+    sellItem(items, 5, 5, 2);
+
+    expiryWarning(items, 5, today);
+    printSummary(items, 5);
+
+    return 0;
+}
