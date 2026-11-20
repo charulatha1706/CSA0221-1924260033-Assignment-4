@@ -1,0 +1,45 @@
+#include <stdio.h>
+#include <string.h>
+struct date {
+int day, month, year;
+};
+struct bloodPressure {
+int systolic;
+int diastolic;
+};
+struct patient {
+char name[20];
+int age;
+char phone[11];
+struct bloodPressure bp;
+struct date visitDate;
+};
+void addPatient(struct patient *p, char n[], int a,
+char ph[], int s, int d,
+int day, int month, int year) {
+strcpy(p->name, n);
+p->age = a;
+strcpy(p->phone, ph);
+p->bp.systolic = s;
+p->bp.diastolic = d;
+p->visitDate.day = day;
+p->visitDate.month = month;
+p->visitDate.year = year;
+}
+int main(void) {
+struct patient p1;
+addPatient(&p1, "Arun", 25, "9876543210",
+           120, 80, 20, 11, 2026);
+
+printf("Name: %s\n", p1.name);
+printf("Age: %d\n", p1.age);
+printf("Phone: %s\n", p1.phone);
+printf("Blood Pressure: %d/%d\n",
+       p1.bp.systolic, p1.bp.diastolic);
+printf("Visit Date: %02d/%02d/%04d\n",
+       p1.visitDate.day,
+       p1.visitDate.month,
+       p1.visitDate.year);
+
+return 0;
+}
